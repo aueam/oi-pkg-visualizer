@@ -45,6 +45,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(discover))
         .route("/nodes", post(nodes))
+        .route("/package_type", post(package_type))
         .with_state(components)
         .layer(CorsLayer::permissive());
 
@@ -60,6 +61,40 @@ async fn main() {
 async fn discover() -> &'static str {
     tracing::debug!("discovered");
     "discovered!"
+}
+
+/// Handler for getting package type
+async fn package_type(
+    State(components): State<Components>,
+    Json(package): Json<PackageName>,
+) -> (StatusCode, String) {
+
+    tracing::debug!("got request on package: {:?}", package);
+
+    for component in components.get_ref() {
+        for package_versions in component.get_versions_ref() {
+            if package_versions.fmri_ref().get_package_name_as_ref_string() == &package.0 {
+                if package_versions.is_obsolete() {
+                    return (StatusCode::OK, "partly-obsoleted".to_owned());
+                }
+
+                if package_versions.is_renamed() {
+                    return (StatusCode::OK, "renamed".to_owned());
+                }
+
+                for fmri in components.get_obsoleted_ref().get_ref() {
+                    if fmri.get_package_name_as_ref_string() == &package.0 {
+                        return (StatusCode::OK, "obsoleted".to_owned());
+                    }
+                }
+
+                // TODO: add returning Non-existent type
+                return (StatusCode::NOT_FOUND, "none".to_owned());
+            }
+        }
+    }
+
+    (StatusCode::NOT_FOUND, "none".to_owned())
 }
 
 /// Handler for returning dependencies(nodes) of package

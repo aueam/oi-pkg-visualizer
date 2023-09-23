@@ -1,4 +1,5 @@
 const NODES_URL = "http://127.0.0.1:2310/nodes";
+const PACKAGE_TYPE_URL = "http://127.0.0.1:2310/package_type"
 const DEFAULT_LAYOUT = {
     name: 'circle',
     nodeSpacing: 5,
@@ -45,10 +46,12 @@ Promise.all([
             let y = evt.position.y;
             // console.log(x, y);
 
-            sendPostRequest(node_id).then(function (result) {
+            sendPostRequest(node_id, NODES_URL).then(async function (result) {
                 // console.log(result);
 
-                toNodes(result).then(function (elements) {
+                let json = await result.json();
+
+                toNodes(json).then(function (elements) {
                     let elements_id = cy.add(elements);
 
                     elements_id.layout({
@@ -73,7 +76,7 @@ Promise.all([
 
                 })
 
-                toEdges(node_id, result).then(function (elements) {
+                toEdges(node_id, json).then(function (elements) {
                     cy.add(elements);
                 })
 
@@ -81,16 +84,14 @@ Promise.all([
         });
     });
 
-async function sendPostRequest(pcg) {
-    const response = await fetch(NODES_URL, {
+async function sendPostRequest(pcg, url) {
+    return await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(pcg)
     });
-
-    return await response.json();
 }
 
 async function toNodes(json) {
@@ -130,7 +131,6 @@ async function toNodes(json) {
 
 async function toEdges(from, to_array) {
     const edges = [];
-
 
     for (let to of to_array) {
 
@@ -175,16 +175,37 @@ async function toEdges(from, to_array) {
 function spawnPackage() {
     const userInput = document.getElementById("spawn-input").value;
 
-    window.cy.add([{
-        "group": "nodes",
-        "data": {
-            "id": userInput,
-            "name": userInput,
-            "score": 1,
-            "query": true,
-            "gene": true
-        },
-        "selectable": true,
-        "grabbable": true,
-    }]).layout(DEFAULT_LAYOUT).run();
+    packageType(userInput).then(function (package_type) {
+        let color = "#008b02";
+        console.log(package_type);
+        if (package_type === "obsoleted") {
+            color = "#000000";
+        } else if (package_type === "partly-obsoleted") {
+            color = "#fccb00";
+        } else if (package_type === "renamed") {
+            color = "#004dcf";
+        }
+
+        window.cy.add([{
+            "group": "nodes",
+            "data": {
+                "id": userInput,
+                "name": userInput,
+                "score": 1,
+                "query": true,
+                "gene": true
+            },
+            "style": {
+                "background-color": color,
+            },
+            "selectable": true,
+            "grabbable": true,
+        }]).layout(DEFAULT_LAYOUT).run();
+    });
+}
+
+function packageType(pcg) {
+    return sendPostRequest(pcg, PACKAGE_TYPE_URL).then(async function (result) {
+        return await result.text();
+    })
 }
