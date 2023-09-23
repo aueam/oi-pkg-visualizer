@@ -81,19 +81,17 @@ async fn package_type(
                 if package_versions.is_renamed() {
                     return (StatusCode::OK, "renamed".to_owned());
                 }
-
-                for fmri in components.get_obsoleted_ref().get_ref() {
-                    if fmri.get_package_name_as_ref_string() == &package.0 {
-                        return (StatusCode::OK, "obsoleted".to_owned());
-                    }
-                }
-
-                // TODO: add returning Non-existent type
-                return (StatusCode::NOT_FOUND, "none".to_owned());
             }
         }
     }
 
+    for fmri in components.get_obsoleted_ref().get_ref() {
+        if fmri.get_package_name_as_ref_string() == &package.0 {
+            return (StatusCode::OK, "obsoleted".to_owned());
+        }
+    }
+
+    // TODO: add returning Non-existent type
     (StatusCode::NOT_FOUND, "none".to_owned())
 }
 
