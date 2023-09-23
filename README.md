@@ -14,5 +14,5 @@ cargo.
 ### Use
 
 - Run server with `./oi-pkg-visualizer 127.0.0.1:2310 /tmp/data.bin`
-    - `/tmp/data.bin` represents output data from (TODO: add source)
+    - `/tmp/data.bin` represents output data from [oi-pkg-checker](https://github.com/aueam/oi-pkg-checker)
 - Visit `website/index.html`
