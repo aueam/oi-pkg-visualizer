@@ -1,0 +1,19 @@
+[package]
+name = "oi-pkg-visualizer"
+version = "0.1.0"
+edition = "2021"
+authors = ["Maroš Telka <maros@telka.sk>"]
+description = "Implementation of OpenIndiana package visualizer website and server"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/aueam/oi-pkg-visualizer"
+keywords = ["pkg", "oi", "visualizer"]
+
+[dependencies]
+axum = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "0.4", features = ["cors"] }
+oi-pkg-checker-core = { path = "../oi-pkg-checker-core" }

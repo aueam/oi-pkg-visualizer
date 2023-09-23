@@ -1,0 +1,41 @@
+[
+  {
+    "selector": "node",
+    "style": {
+      "width": "mapData(score, 0, 0.006769776522008331, 20, 60)",
+      "height": "mapData(score, 0, 0.006769776522008331, 20, 60)",
+      "content": "data(name)",
+      "font-size": "12px",
+      "text-valign": "center",
+      "text-halign": "center",
+      "background-color": "#555",
+      "text-outline-color": "#555",
+      "text-outline-width": "2px",
+      "color": "#fff",
+      "overlay-padding": "6px",
+      "z-index": "10",
+      "shape": "round-rectangle"
+    }
+  },
+  {
+    "selector": "node:selected",
+    "style": {
+      "border-width": "6px",
+      "border-color": "#AAD8FF",
+      "border-opacity": "0.5",
+      "background-color": "#77828C",
+      "text-outline-color": "#77828C"
+    }
+  },
+  {
+    "selector": "edge",
+    "style": {
+      "curve-style": "bezier",
+      "haystack-radius": "0.5",
+      "line-color": "#bbb",
+      "width": "mapData(weight, 0, 1, 1, 8)",
+      "overlay-padding": "3px",
+      "target-arrow-shape": "data(arrow)"
+    }
+  }
+]
