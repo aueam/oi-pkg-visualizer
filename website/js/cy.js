@@ -22,20 +22,19 @@ Promise.all([
             layout: {name: 'circle'}
         });
 
-        const starter = "system/library";
-
-        cy.add([{
-            "group": "nodes",
-            "data": {
-                "id": starter,
-                "name": starter,
-                "score": 1,
-                "query": true,
-                "gene": true
-            },
-            "selectable": true,
-            "grabbable": true,
-        }]).layout(DEFAULT_LAYOUT).run();
+        // const starter = "system/library";
+        // cy.add([{
+        //     "group": "nodes",
+        //     "data": {
+        //         "id": starter,
+        //         "name": starter,
+        //         "score": 1,
+        //         "query": true,
+        //         "gene": true
+        //     },
+        //     "selectable": true,
+        //     "grabbable": true,
+        // }]).layout(DEFAULT_LAYOUT).run();
 
         cy.on('dblclick', 'node', function (evt) {
             const node = evt.target;
