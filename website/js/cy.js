@@ -97,13 +97,13 @@ async function toNodes(json) {
     const elements = [];
 
     for (let element of json) {
-        let color = "#abb8c3";
+        let color = "#008b02";
         if (element[2] === "obsoleted") {
-            color = "#0693e3";
+            color = "#000000";
         } else if (element[2] === "partly-obsoleted") {
-            color = "#8ed1fc";
+            color = "#fccb00";
         } else if (element[2] === "renamed") {
-            color = "#ff6900";
+            color = "#004dcf";
         }
 
         elements.push({
