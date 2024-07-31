@@ -1,27 +1,30 @@
+use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use fmri::FMRI;
+use oi_pkg_checker_core::packages::{
+    components::Components, depend_types::DependTypes, package::Package,
+};
+use serde::Serialize;
 use std::{
     env::args,
-    net::SocketAddr
+    fmt::Debug,
+    net::SocketAddr,
+    sync::{Mutex, Weak},
 };
-use axum::{
-    extract::State,
-    routing::{get, post},
-    http::StatusCode,
-    Json, Router, Server
-};
-use fmri::FMRI;
-use serde::{Deserialize, Serialize};
-use tokio::signal;
+use tokio::{net::TcpListener, signal};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::fmt::init;
-use oi_pkg_checker_core::{Components, DependTypes, DependencyTypes, Package, PackageVersions};
-
-/// Represents package name
-#[derive(Deserialize, Debug)]
-struct PackageName(String);
 
 /// Represents nodes(package_name, depend_type(Runtime/Build/Test/SystemBuild/SystemTest/None), package_type(obsoleted/partly-obsoleted/renamed/none))
 #[derive(Serialize)]
-struct Nodes(Vec<(String, String, String)>);
+struct Nodes(Vec<(String, String, PackageType)>);
+
+#[derive(Serialize, Debug, Clone)]
+enum PackageType {
+    Renamed,
+    PartlyObsoleted,
+    Obsoleted,
+    Normal,
+}
 
 #[tokio::main]
 async fn main() {
@@ -33,8 +36,6 @@ async fn main() {
         panic!("Usage: {} <listening_addr_and_port> <data_path>", args[0]);
     }
 
-    let components = Components::deserialize(&args[2]);
-
     let addr = match args[1].parse::<SocketAddr>() {
         Ok(socket_addr) => socket_addr,
         Err(e) => {
@@ -43,213 +44,141 @@ async fn main() {
     };
 
     let app = Router::new()
-        .route("/", get(discover))
         .route("/nodes", post(nodes))
         .route("/package_type", post(package_type))
-        .with_state(components)
+        .with_state(Components::deserialize(&args[2]).unwrap())
         .layer(CorsLayer::permissive());
 
-    tracing::debug!("listening on {}", addr);
-    Server::bind(&addr)
-        .serve(app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
-}
-
-/// Basic discover handler for testing
-async fn discover() -> &'static str {
-    tracing::debug!("discovered");
-    "discovered!"
+    tracing::info!("listening on {}", addr);
+    axum::serve(
+        TcpListener::bind(addr).await.unwrap(),
+        app.into_make_service(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .unwrap();
 }
 
 /// Handler for getting package type
 async fn package_type(
     State(components): State<Components>,
-    Json(package): Json<PackageName>,
+    Json(package_name): Json<String>,
 ) -> (StatusCode, String) {
+    tracing::debug!("got request on package: {:?}", package_name);
 
-    tracing::debug!("got request on package: {:?}", package);
-
-    for component in components.get_ref() {
-        for package_versions in component.get_versions_ref() {
-            if package_versions.fmri_ref().get_package_name_as_ref_string() == &package.0 {
-                if package_versions.is_obsolete() {
-                    return (StatusCode::OK, "partly-obsoleted".to_owned());
-                }
-
-                if package_versions.is_renamed() {
-                    return (StatusCode::OK, "renamed".to_owned());
-                }
-            }
+    (
+        StatusCode::OK,
+        match type_of_package(&components, &FMRI::parse_raw(&package_name).unwrap()) {
+            PackageType::Renamed => "Renamed",
+            PackageType::PartlyObsoleted => "PartlyObsoleted",
+            PackageType::Obsoleted => "Obsoleted",
+            PackageType::Normal => "None",
         }
-    }
-
-    for fmri in components.get_obsoleted_ref().get_ref() {
-        if fmri.get_package_name_as_ref_string() == &package.0 {
-            return (StatusCode::OK, "obsoleted".to_owned());
-        }
-    }
-
-    // TODO: add returning Non-existent type
-    (StatusCode::NOT_FOUND, "none".to_owned())
+        .to_owned(),
+    )
 }
 
 /// Handler for returning dependencies(nodes) of package
 async fn nodes(
     State(components): State<Components>,
-    Json(package): Json<PackageName>,
+    Json(package_name): Json<String>,
 ) -> (StatusCode, Json<Nodes>) {
-    let nodes: &mut Vec<(String, String, String)> = &mut Vec::new();
+    tracing::debug!("got request on package: {:?}", package_name);
 
-    tracing::debug!("got request on package: {:?}", package);
+    let nodes: &mut Vec<(String, String, PackageType)> = &mut Vec::new();
 
-    let mut obsoleted_packages: Vec<String> = Vec::new();
-    for fmri in components.get_obsoleted_ref().get_ref() {
-        obsoleted_packages.push(fmri.get_package_name_as_ref_string().clone())
+    let package = match components.get_package_by_fmri(&FMRI::parse_raw(&package_name).unwrap()) {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, Json(Nodes(nodes.clone()))),
     }
+    .lock()
+    .unwrap();
 
-    let mut found = false;
-    for component in components.get_ref() {
-        for package_versions in component.get_versions_ref() {
-            if package_versions.fmri_ref().get_package_name_as_ref_string() == &package.0 {
-                if package_versions.is_obsolete() {
-                    return (StatusCode::OK, Json(Nodes(nodes.clone())));
+    let mut add = |f: &FMRI, label: &str| {
+        nodes.push((
+            f.clone().get_package_name_as_string(),
+            label.to_owned(),
+            type_of_package(&components, f),
+        ));
+    };
+
+    for d in package
+        .get_versions()
+        .first()
+        .unwrap()
+        .get_runtime_dependencies()
+    {
+        match d {
+            DependTypes::Require(f)
+            | DependTypes::Optional(f)
+            | DependTypes::Exclude(f)
+            | DependTypes::Incorporate(f)
+            | DependTypes::Origin(f)
+            | DependTypes::Conditional(f, _)
+            | DependTypes::Group(f)
+            | DependTypes::Parent(f) => {
+                add(f, "Runtime");
+            }
+            DependTypes::RequireAny(f_list) | DependTypes::GroupAny(f_list) => {
+                for f in f_list.get_ref() {
+                    add(f, "Runtime");
                 }
-
-                let package = package_versions.get_packages_ref().last().unwrap();
-
-                get_nodes_from_dependencies(nodes, components.clone(), &obsoleted_packages, DependencyTypes::Runtime, package);
-                get_nodes_from_dependencies(nodes, components.clone(), &obsoleted_packages, DependencyTypes::Build, package);
-                get_nodes_from_dependencies(nodes, components.clone(), &obsoleted_packages, DependencyTypes::Test, package);
-                get_nodes_from_dependencies(nodes, components.clone(), &obsoleted_packages, DependencyTypes::SystemBuild, package);
-                get_nodes_from_dependencies(nodes, components.clone(), &obsoleted_packages, DependencyTypes::SystemTest, package);
-
-                found = true;
-                break;
             }
         }
-
-        if found { break; }
     }
 
-    if !found {
-        tracing::error!("package: {:?} not found", package);
-        return (StatusCode::NOT_FOUND, Json(Nodes(nodes.clone())));
+    let component = match package.is_in_component() {
+        None => return (StatusCode::OK, Json(Nodes(nodes.clone()))),
+        Some(c) => c,
     }
+    .lock()
+    .unwrap();
 
-    tracing::debug!("sending on package: {:?} packages: {:?}", package, nodes);
+    let mut check_deps = |deps: &Vec<Weak<Mutex<Package>>>, label: &str| {
+        for f in deps.iter().map(|p| match p.upgrade().unwrap().try_lock() {
+            Ok(b) => b.get_fmri().clone(),
+            Err(_) => FMRI::parse_raw("self_package_c087m34f7n83n4f83c").unwrap(),
+        }) {
+            add(&f, label);
+        }
+    };
+
+    check_deps(component.get_build_dependencies(), "Build");
+    check_deps(component.get_test_dependencies(), "Test");
+    check_deps(component.get_sys_build_dependencies(), "SystemBuild");
+    check_deps(component.get_sys_test_dependencies(), "SystemTest");
+
     (StatusCode::OK, Json(Nodes(nodes.clone())))
 }
 
-/// Simply extracts package names from dependencies
-fn get_nodes_from_dependencies(nodes: &mut Vec<(String, String, String)>, components: Components, obsoleted_packages: &Vec<String>, dependency_type: DependencyTypes, package: &Package) {
-    let (d_type, dependencies) = match dependency_type {
-        DependencyTypes::Runtime => ("runtime".to_owned(), package.get_runtime_dependencies()),
-        DependencyTypes::Build => ("build".to_owned(), package.get_build_dependencies()),
-        DependencyTypes::Test => ("test".to_owned(), package.get_test_dependencies()),
-        DependencyTypes::SystemBuild => ("system-build".to_owned(), package.get_system_build_dependencies()),
-        DependencyTypes::SystemTest => ("system-test".to_owned(), package.get_system_test_dependencies()),
-        DependencyTypes::None => panic!()
-    };
-
-    let node_type_closure = |
-        package_name: &String,
-        package: &PackageVersions,
-        obsoleted_packages: &[String]
-    | -> String {
-        if package.is_obsolete() {
-            return "partly-obsoleted".to_owned();
-        } else if package.is_renamed() {
-            return "renamed".to_owned();
-        }
-
-        return "none".to_owned();
-    };
-
-    for dependency in dependencies {
-        let package_name = &match dependency.get_ref() {
-            DependTypes::Require(fmri) => fmri.clone().get_package_name_as_string(),
-            DependTypes::Optional(fmri) => fmri.clone().get_package_name_as_string(),
-            DependTypes::Incorporate(fmri) => fmri.clone().get_package_name_as_string(),
-            DependTypes::RequireAny(fmri_list) => {
-                for fmri in fmri_list.get_ref() {
-                    let package_name = &fmri.clone().get_package_name_as_ref_string().clone();
-
-                    match &components.get_package_versions_from_fmri(&FMRI::parse_raw(package_name)) {
-                        None => {
-                            // obsoleted or Non-existent
-                            for obsoleted_package in obsoleted_packages {
-                                if obsoleted_package == package_name {
-                                    nodes.push((
-                                        package_name.clone(),
-                                        d_type.clone(),
-                                        "obsoleted".to_owned()
-                                    ));
-                                }
-                            }
-
-                            // todo!("add Non-existent packages");
-                            // nodes.push((
-                            //     package_name.clone(),
-                            //     d_type.clone(),
-                            //     "None".to_owned()
-                            // ));
-                        }
-                        Some(package) => {
-
-                            nodes.push((
-                                package_name.clone(),
-                                d_type.clone(),
-                                node_type_closure(&package_name, package, obsoleted_packages)
-                            ));
-                        }
-                    }
-                }
-                continue;
-            }
-            DependTypes::Conditional(fmri, _) => fmri.clone().get_package_name_as_string(),
-            DependTypes::Group(fmri) => fmri.clone().get_package_name_as_string(),
-            _ => unimplemented!()
-        };
-
-        println!("{}", package_name);
-
-        match &components.get_package_versions_from_fmri(&FMRI::parse_raw(package_name)) {
-            None => {
-                // obsoleted or Non-existent
-                for obsoleted_package in obsoleted_packages {
-                    if obsoleted_package == package_name {
-                        nodes.push((
-                            package_name.clone(),
-                            d_type.clone(),
-                            "obsoleted".to_owned()
-                        ));
-                    }
-                }
-
-                // todo!("add Non-existent packages");
-                // nodes.push((
-                //     package_name.clone(),
-                //     d_type.clone(),
-                //     "None".to_owned()
-                // ));
-            }
-            Some(package) => {
-                nodes.push((
-                    package_name.clone(),
-                    d_type.clone(),
-                    node_type_closure(&package_name, package, obsoleted_packages)
-                ));
-            }
-        }
+fn type_of_package(components: &Components, fmri: &FMRI) -> PackageType {
+    let package = match components.get_package_by_fmri(fmri) {
+        Ok(p) => p,
+        Err(_) => return PackageType::Normal,
     }
+    .lock()
+    .unwrap();
+
+    if package.is_renamed() {
+        return PackageType::Renamed;
+    }
+
+    if package.is_obsolete() {
+        if !package.get_versions().first().unwrap().is_obsolete() {
+            return PackageType::PartlyObsoleted;
+        }
+        return PackageType::Obsoleted;
+    }
+
+    PackageType::Normal
 }
 
-///  For graceful shutdown
+/// For graceful shutdown
 async fn shutdown_signal() {
     let ctrl_c = async {
-        signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
     };
 
     let terminate = async {

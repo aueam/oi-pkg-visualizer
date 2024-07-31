@@ -1,41 +1,18 @@
-const NODES_URL = "http://127.0.0.1:2310/nodes";
-const PACKAGE_TYPE_URL = "http://127.0.0.1:2310/package_type"
+const SERVER_IP = "http://127.0.0.1:2310";
+const NODES_URL = SERVER_IP + "/nodes";
+const PACKAGE_TYPE_URL = SERVER_IP + "/package_type"
 const DEFAULT_LAYOUT = {
-    name: 'circle',
-    nodeSpacing: 5,
-    edgeLengthVal: 45,
-    animate: true,
-    randomize: false,
-    maxSimulationTime: 1500
+    name: 'circle', nodeSpacing: 5, edgeLengthVal: 45, animate: true, randomize: false, maxSimulationTime: 1500
 };
 
-Promise.all([
-    fetch('cy-style.json')
-        .then(function (res) {
-            return res.json();
-        })
-])
+Promise.all([fetch('cy-style.json')
+    .then(function (res) {
+        return res.json();
+    })])
     .then(function (dataArray) {
         const cy = window.cy = cytoscape({
-            container: document.getElementById('cy'),
-            style: dataArray[0],
-            elements: [],
-            layout: {name: 'circle'}
+            container: document.getElementById('cy'), style: dataArray[0], elements: [], layout: {name: 'circle'}
         });
-
-        // const starter = "system/library";
-        // cy.add([{
-        //     "group": "nodes",
-        //     "data": {
-        //         "id": starter,
-        //         "name": starter,
-        //         "score": 1,
-        //         "query": true,
-        //         "gene": true
-        //     },
-        //     "selectable": true,
-        //     "grabbable": true,
-        // }]).layout(DEFAULT_LAYOUT).run();
 
         cy.on('dblclick', 'node', function (evt) {
             const node = evt.target;
@@ -55,9 +32,7 @@ Promise.all([
                     let elements_id = cy.add(elements);
 
                     elements_id.layout({
-                        name: 'circle',
-                        nodeSpacing: 1,
-                        edgeLengthVal: 45,
+                        name: 'circle', nodeSpacing: 1, edgeLengthVal: 45,
 
                         // fit: true, // whether to fit the viewport to the graph
                         boundingBox: {x1: x, y1: y, x2: x, y2: y}, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
@@ -86,11 +61,9 @@ Promise.all([
 
 async function sendPostRequest(pcg, url) {
     return await fetch(url, {
-        method: 'POST',
-        headers: {
+        method: 'POST', headers: {
             'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(pcg)
+        }, body: JSON.stringify(pcg)
     });
 }
 
@@ -98,31 +71,22 @@ async function toNodes(json) {
     const elements = [];
 
     for (let element of json) {
+        console.log(element[2]);
         let color = "#008b02";
-        if (element[2] === "obsoleted") {
+        if (element[2] === "Obsoleted") {
             color = "#000000";
-        } else if (element[2] === "partly-obsoleted") {
+        } else if (element[2] === "PartlyObsoleted") {
             color = "#fccb00";
-        } else if (element[2] === "renamed") {
+        } else if (element[2] === "Renamed") {
             color = "#004dcf";
         }
 
         elements.push({
-            "group": "nodes",
-            "data": {
-                "id": element[0],
-                "name": element[0],
-                "score": 1,
-                "query": true,
-                "gene": true
-            },
-            "style": {
+            "group": "nodes", "data": {
+                "id": element[0], "name": element[0], "score": 1, "query": true, "gene": true
+            }, "style": {
                 "background-color": color,
-            },
-            "background-color": color,
-            "selected": true,
-            "selectable": true,
-            "grabbable": true,
+            }, "background-color": color, "selected": true, "selectable": true, "grabbable": true,
         });
     }
 
@@ -134,37 +98,27 @@ async function toEdges(from, to_array) {
 
     for (let to of to_array) {
 
-        // console.log(to[1])
+        console.log(to[1])
 
         let color = "#008b02"; // runtime
         let line_style = "solid"; // runtime
-        if (to[1] === "build") {
+        if (to[1] === "Build") {
             color = "#004dcf";
-        } else if (to[1] === "test") {
+        } else if (to[1] === "Test") {
             color = "#abb8c3";
-        } else if (to[1] === "system-build") {
+        } else if (to[1] === "SystemBuild") {
             color = "#004dcf";
             line_style = "dashed";
-        } else if (to[1] === "system-test") {
+        } else if (to[1] === "SystemTest") {
             color = "#abb8c3";
             line_style = "dashed";
         }
 
         edges.push({
             "data": {
-                "id": from + to[0],
-                "source": from,
-                "target": to[0],
-                "weight": 0.1,
-                "arrow": "triangle"
-            },
-            "group": "edges",
-            "selectable": true,
-            "grabbed": false,
-            "grabbable": true,
-            "style": {
-                "line-color": color,
-                "line-style": line_style,
+                "id": from + to[0], "source": from, "target": to[0], "weight": 0.1, "arrow": "triangle"
+            }, "group": "edges", "selectable": true, "grabbed": false, "grabbable": true, "style": {
+                "line-color": color, "line-style": line_style,
             }
         });
     }
@@ -177,29 +131,22 @@ function spawnPackage() {
 
     packageType(userInput).then(function (package_type) {
         let color = "#008b02";
-        console.log(package_type);
-        if (package_type === "obsoleted") {
+
+        // console.log(package_type);
+        if (package_type === "Obsoleted") {
             color = "#000000";
-        } else if (package_type === "partly-obsoleted") {
+        } else if (package_type === "PartlyObsoleted") {
             color = "#fccb00";
-        } else if (package_type === "renamed") {
+        } else if (package_type === "Renamed") {
             color = "#004dcf";
         }
 
         window.cy.add([{
-            "group": "nodes",
-            "data": {
-                "id": userInput,
-                "name": userInput,
-                "score": 1,
-                "query": true,
-                "gene": true
-            },
-            "style": {
+            "group": "nodes", "data": {
+                "id": userInput, "name": userInput, "score": 1, "query": true, "gene": true
+            }, "style": {
                 "background-color": color,
-            },
-            "selectable": true,
-            "grabbable": true,
+            }, "selectable": true, "grabbable": true,
         }]).layout(DEFAULT_LAYOUT).run();
     });
 }

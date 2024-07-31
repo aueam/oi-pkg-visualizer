@@ -10,11 +10,11 @@ repository = "https://github.com/aueam/oi-pkg-visualizer"
 keywords = ["pkg", "oi", "visualizer"]
 
 [dependencies]
-fmri = "0.2.1"
-oi-pkg-checker-core = "0.1"
-axum = "0.6"
-serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.0", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower-http = { version = "0.4", features = ["cors"] }
+oi-pkg-checker-core = { version = "2.0.1", features = ["thread_safe"] }
+fmri = "1.0.3"
+axum = "0.7.5"
+serde = { version = "1.0.204", features = ["derive"] }
+tokio = { version = "1.39.2", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tower-http = { version = "0.5.2", features = ["cors"] }
