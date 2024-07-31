@@ -1,6 +1,6 @@
 [package]
 name = "oi-pkg-visualizer"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 authors = ["Maroš Telka <maros@telka.sk>"]
 description = "Implementation of OpenIndiana package visualizer website and server"
