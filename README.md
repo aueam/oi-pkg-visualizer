@@ -35,3 +35,9 @@ Is website for visualizing dependencies between packages from OpenIndiana.
 - test = grey
 - system-build = dashed blue
 - system-test = dashed grey
+
+## Version Compatibility
+
+| oi-pkg-visualizer | oi-pkg-checker-core |
+|:-----------------:|:-------------------:|
+|       1.1.1       |        2.0.1        |
