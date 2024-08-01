@@ -10,7 +10,7 @@ repository = "https://github.com/aueam/oi-pkg-visualizer"
 keywords = ["pkg", "oi", "visualizer"]
 
 [dependencies]
-oi-pkg-checker-core = { version = "2.0.1", features = ["thread_safe"] }
+oi-pkg-checker-core = { version = "2.0.2", features = ["thread_safe"] }
 fmri = "1.0.3"
 axum = "0.7.5"
 serde = { version = "1.0.204", features = ["derive"] }
