@@ -180,11 +180,10 @@ async fn nodes(
     .unwrap();
 
     let mut check_deps = |deps: &Vec<Weak<Mutex<Package>>>, label: &str| {
-        for f in deps.iter().map(|p| match p.upgrade().unwrap().try_lock() {
-            Ok(b) => b.get_fmri().clone(),
-            Err(_) => FMRI::parse_raw("self_package_c087m34f7n83n4f83c").unwrap(),
-        }) {
-            add(&f, label);
+        for p in deps {
+            if let Ok(b) = p.upgrade().unwrap().try_lock() {
+                add(b.get_fmri(), label)
+            }
         }
     };
 
