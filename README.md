@@ -38,7 +38,7 @@ Just run `make`, it will download [cytoscape.js](https://github.com/cytoscape/cy
 
 ## Version Compatibility
 
-| oi-pkg-visualizer | oi-pkg-checker-core |
-|:-----------------:|:-------------------:|
-|   1.1.2, 1.1.3    |        2.0.2        |
-|       1.1.1       |        2.0.1        |
+|  oi-pkg-visualizer  | oi-pkg-checker-core |
+|:-------------------:|:-------------------:|
+| 1.1.2, 1.1.3, 1.1.4 |        2.0.2        |
+|        1.1.1        |        2.0.1        |
