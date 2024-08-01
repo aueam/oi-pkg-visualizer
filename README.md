@@ -16,8 +16,7 @@ Just run `make`, it will download [cytoscape.js](https://github.com/cytoscape/cy
 - Run server with `target/release/oi-pkg-visualizer 127.0.0.1:2310 /tmp/data.bin`
     - `127.0.0.1:2310` is listening address and port of server
     - `/tmp/data.bin` is path to the data from the [oi-pkg-checker](https://github.com/aueam/oi-pkg-checker)
-- if necessary, change the server address and/or port and/or transfer protocol in the `website/js/cy.js` (first line)
-- Go to `127.0.0.1:2310`
+- Open `127.0.0.1:2310` in your browser
 
 ## Style legend
 
@@ -38,7 +37,7 @@ Just run `make`, it will download [cytoscape.js](https://github.com/cytoscape/cy
 
 ## Version Compatibility
 
-|  oi-pkg-visualizer  | oi-pkg-checker-core |
-|:-------------------:|:-------------------:|
-| 1.1.2, 1.1.3, 1.1.4 |        2.0.2        |
-|        1.1.1        |        2.0.1        |
+| oi-pkg-visualizer | oi-pkg-checker-core |
+|:-----------------:|:-------------------:|
+|   1.1.2 - 1.1.5   |        2.0.2        |
+|       1.1.1       |        2.0.1        |
