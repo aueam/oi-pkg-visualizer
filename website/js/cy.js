@@ -71,7 +71,7 @@ async function toNodes(json) {
     const elements = [];
 
     for (let element of json) {
-        console.log(element[2]);
+        // console.log(element[2]);
         let color = "#008b02";
         if (element[2] === "Obsoleted") {
             color = "#000000";
@@ -98,7 +98,7 @@ async function toEdges(from, to_array) {
 
     for (let to of to_array) {
 
-        console.log(to[1])
+        // console.log(to[1])
 
         let color = "#008b02"; // runtime
         let line_style = "solid"; // runtime
