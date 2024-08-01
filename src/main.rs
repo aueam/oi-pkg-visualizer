@@ -96,7 +96,7 @@ async fn main() {
                         header::CONTENT_TYPE,
                         HeaderValue::from_static("application/javascript"),
                     )],
-                    fs::read_to_string("../website/js/cytoscape.min.js").unwrap(),
+                    fs::read_to_string("website/js/cytoscape.min.js").unwrap(),
                 )
                     .into_response()
             }),
