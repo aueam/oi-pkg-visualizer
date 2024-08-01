@@ -1,3 +1,6 @@
+use axum::http::{header, HeaderValue};
+use axum::response::{Html, IntoResponse};
+use axum::routing::get;
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 use fmri::FMRI;
 use oi_pkg_checker_core::packages::{
@@ -26,6 +29,42 @@ enum PackageType {
     Normal,
 }
 
+macro_rules! html {
+    ($p:expr) => {
+        get(|| async { Html(include_str!($p)) })
+    };
+}
+
+macro_rules! content_type {
+    ($p:expr, $t:expr) => {
+        get(|| async {
+            (
+                [(header::CONTENT_TYPE, HeaderValue::from_static($t))],
+                include_str!($p),
+            )
+                .into_response()
+        })
+    };
+}
+
+macro_rules! css {
+    ($p:expr) => {
+        content_type!($p, "text/css")
+    };
+}
+
+macro_rules! js {
+    ($p:expr) => {
+        content_type!($p, "application/javascript")
+    };
+}
+
+macro_rules! json {
+    ($p:expr) => {
+        content_type!($p, "application/json")
+    };
+}
+
 #[tokio::main]
 async fn main() {
     init();
@@ -44,6 +83,12 @@ async fn main() {
     };
 
     let app = Router::new()
+        .route("/", html!("../website/index.html"))
+        .route("/index.html", html!("../website/index.html"))
+        .route("/style.css", css!("../website/css/style.css"))
+        .route("/cy.js", js!("../website/js/cy.js"))
+        .route("/cytoscape.min.js", js!("../website/js/cytoscape.min.js"))
+        .route("/cy-style.json", json!("../website/cy-style.json"))
         .route("/nodes", post(nodes))
         .route("/package_type", post(package_type))
         .with_state(Components::deserialize(&args[2]).unwrap())
