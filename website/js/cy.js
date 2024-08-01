@@ -1,6 +1,6 @@
-const SERVER_IP = "http://127.0.0.1:2310";
-const NODES_URL = SERVER_IP + "/nodes";
-const PACKAGE_TYPE_URL = SERVER_IP + "/package_type"
+const SERVER_IP = window.location;
+const NODES_URL = SERVER_IP + "nodes";
+const PACKAGE_TYPE_URL = SERVER_IP + "package_type"
 const DEFAULT_LAYOUT = {
     name: 'circle', nodeSpacing: 5, edgeLengthVal: 45, animate: true, randomize: false, maxSimulationTime: 1500
 };
