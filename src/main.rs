@@ -7,6 +7,7 @@ use oi_pkg_checker_core::packages::{
     components::Components, depend_types::DependTypes, package::Package,
 };
 use serde::Serialize;
+use std::sync::{MutexGuard, TryLockResult};
 use std::{
     env::args,
     fmt::Debug,
@@ -209,12 +210,14 @@ async fn nodes(
 }
 
 fn type_of_package(components: &Components, fmri: &FMRI) -> PackageType {
-    let package = match components.get_package_by_fmri(fmri) {
-        Ok(p) => p,
-        Err(_) => return PackageType::Normal,
-    }
-    .lock()
-    .unwrap();
+    let package = match components
+        .get_package_by_fmri(fmri)
+        .ok()
+        .and_then(|p| p.try_lock().ok())
+    {
+        None => return PackageType::Normal,
+        Some(p) => p,
+    };
 
     if package.is_renamed() {
         return PackageType::Renamed;
