@@ -1,4 +1,4 @@
-build: build_release download_cytoscape
+build: download_cytoscape build_release
 
 build_release:
 	cargo build --release
