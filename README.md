@@ -40,4 +40,5 @@ Just run `make`, it will download [cytoscape.js](https://github.com/cytoscape/cy
 
 | oi-pkg-visualizer | oi-pkg-checker-core |
 |:-----------------:|:-------------------:|
+|       1.1.2       |        2.0.2        |
 |       1.1.1       |        2.0.1        |
