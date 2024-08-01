@@ -17,7 +17,7 @@ Just run `make`, it will download [cytoscape.js](https://github.com/cytoscape/cy
     - `127.0.0.1:2310` is listening address and port of server
     - `/tmp/data.bin` is path to the data from the [oi-pkg-checker](https://github.com/aueam/oi-pkg-checker)
 - if necessary, change the server address and/or port and/or transfer protocol in the `website/js/cy.js` (first line)
-- Visit `website/index.html`
+- Go to `127.0.0.1:2310`
 
 ## Style legend
 
