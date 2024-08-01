@@ -10,6 +10,7 @@ use serde::Serialize;
 use std::{
     env::args,
     fmt::Debug,
+    fs,
     net::SocketAddr,
     sync::{Mutex, Weak},
 };
@@ -87,7 +88,19 @@ async fn main() {
         .route("/index.html", html!("../website/index.html"))
         .route("/style.css", css!("../website/css/style.css"))
         .route("/cy.js", js!("../website/js/cy.js"))
-        .route("/cytoscape.min.js", js!("../website/js/cytoscape.min.js"))
+        .route(
+            "/cytoscape.min.js",
+            get(|| async {
+                (
+                    [(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static("application/javascript"),
+                    )],
+                    fs::read_to_string("../website/js/cytoscape.min.js").unwrap(),
+                )
+                    .into_response()
+            }),
+        )
         .route("/cy-style.json", json!("../website/cy-style.json"))
         .route("/nodes", post(nodes))
         .route("/package_type", post(package_type))
