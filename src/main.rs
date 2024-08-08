@@ -7,7 +7,6 @@ use oi_pkg_checker_core::packages::{
     components::Components, depend_types::DependTypes, package::Package,
 };
 use serde::Serialize;
-use std::sync::{MutexGuard, TryLockResult};
 use std::{
     env::args,
     fmt::Debug,
